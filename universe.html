@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>THE ETERNAL CYCLE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400&family=Cinzel:wght@400&display=swap');
+
+        :root {
+            --text-color: rgba(255, 255, 255, 0.9);
+            --accent-color: #a0c0ff;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: auto;
+            min-height: 100%;
+            overflow-x: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+
+        /* MASSIVE SCROLL TRACK FOR THE FULL JOURNEY */
+        #scroll-track {
+            height: 40000vh; 
+            position: relative;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stage-text {
+            position: absolute;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            max-width: 80%;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 3rem;
+            letter-spacing: 0.5rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 400;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        p {
+            font-weight: 300;
+            font-size: 1.1rem;
+            letter-spacing: 0.1rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .data-point {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            letter-spacing: 0.2rem;
+            text-transform: uppercase;
+            margin-top: 1rem;
+            display: inline-block;
+            border-bottom: 1px solid rgba(160, 192, 255, 0.3);
+            padding-bottom: 5px;
+        }
+
+        /* Specific styles for deep stages */
+        .deep-stage h1 { color: #ffd700; text-shadow: 0 0 30px #ff8800; }
+        .loop-stage h1 { color: #fff; text-shadow: 0 0 50px #fff; }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            transition: opacity 1s ease;
+            pointer-events: none;
+        }
+
+        .loader-text {
+            font-family: 'Cinzel', serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.3rem;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+
+        /* Controls */
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            padding: 10px 20px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+
+        .scroll-hint {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2rem;
+            opacity: 0;
+            z-index: 20;
+            pointer-events: none;
+            animation: fadeIn 2s 2s forwards, bounce 2s infinite;
+        }
+
+        @keyframes fadeIn { to { opacity: 0.7; } }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform:translateX(-50%) translateY(0);} 40% {transform:translateX(-50%) translateY(-10px);} 60% {transform:translateX(-50%) translateY(-5px);} }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.8rem; }
+            p { font-size: 0.9rem; }
+            #controls { bottom: 20px; right: 50%; transform: translateX(50%); width: max-content;}
+        }
+    </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+</head>
+<body>
+
+    <!-- Audio Element -->
+    <audio id="bgm" loop>
+        <source src="https://cdn.pixabay.com/download/audio/2022/10/28/audio_245642d6c1.mp3?filename=space-atmosphere-124952.mp3" type="audio/mp3">
+        Your browser does not support HTML5 audio.
+    </audio>
+
+    <div id="loader">
+        <div class="loader-text">GENERATING EXISTENCE</div>
+    </div>
+
+    <div id="canvas-container"></div>
+    <div id="scroll-track"></div>
+
+    <div id="ui-layer">
+        
+        <!-- STAGES -->
+        <div class="stage-text" id="text-cell">
+            <h1>The Spark</h1>
+            <p>Life begins in the microscopic.</p>
+            <div class="data-point">10 Micrometers</div>
+        </div>
+
+        <div class="stage-text" id="text-human">
+            <h1>The Observer</h1>
+            <p>Consciousness awakens.</p>
+            <div class="data-point">1.7 Meters</div>
+        </div>
+
+        <div class="stage-text" id="text-start">
+            <h1>Earth</h1>
+            <p>The Cradle.</p>
+            <div class="data-point">12,742 km</div>
+        </div>
+
+        <div class="stage-text" id="text-solar">
+            <h1>The Solar System</h1>
+            <p>Our cosmic neighborhood.</p>
+            <div class="data-point">9 Billion km</div>
+        </div>
+
+        <div class="stage-text" id="text-galaxy">
+            <h1>The Milky Way</h1>
+            <p>A spiral of stardust.</p>
+            <div class="data-point">100,000 Light-Years</div>
+        </div>
+
+        <div class="stage-text" id="text-web">
+            <h1>The Cosmic Web</h1>
+            <p>The grand structure of matter.</p>
+            <div class="data-point">93 Billion Light-Years</div>
+        </div>
+
+        <div class="stage-text" id="text-multiverse">
+            <h1>The Multiverse</h1>
+            <p>Our universe is but a single bubble in the foam of reality.</p>
+            <div class="data-point">Infinite Scale</div>
+        </div>
+
+        <div class="stage-text" id="text-dimensions">
+            <h1>Higher Dimensions</h1>
+            <p>Where time becomes geometry.</p>
+            <div class="data-point">11th Dimension</div>
+        </div>
+
+        <div class="stage-text deep-stage" id="text-planes">
+            <h1>Planes of Existence</h1>
+            <p>Beyond matter. Beyond thought.</p>
+        </div>
+
+        <div class="stage-text deep-stage" id="text-source">
+            <h1>The Source</h1>
+            <p>Pure Energy. The Truth.</p>
+            <p>The fuel of creation, preservation, and destruction.</p>
+        </div>
+
+        <div class="stage-text deep-stage" id="text-bigbang">
+            <h1>IGNITION</h1>
+            <p>The Cycle Renews.</p>
+        </div>
+
+        <div class="stage-text" id="text-early-solar">
+            <h1>Primordial Chaos</h1>
+            <p>The birth of a new star system.</p>
+        </div>
+
+        <div class="stage-text" id="text-early-earth">
+            <h1>Molten Earth</h1>
+            <p>Cooling into life.</p>
+        </div>
+
+        <div class="stage-text loop-stage" id="text-loop">
+            <h1>The Loop Continues</h1>
+            <p>Eternity is a circle.</p>
+        </div>
+
+    </div>
+
+    <div id="controls">
+        <button id="auto-scroll-btn" class="control-btn">Start Auto-Pilot</button>
+    </div>
+
+    <div class="scroll-hint">Scroll to Ascend</div>
+
+    <script>
+        const config = {
+            starCount: 8000,
+            galaxyParticles: 10000,
+            webParticles: 5000,
+            bubbleCount: 50,
+        };
+
+        // --- SCENE SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.002);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 50000);
+        camera.position.z = 2;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        // --- STAGE GROUPS ---
+        const stageMicro = new THREE.Group();
+        const stageEarth = new THREE.Group();
+        const stageSolar = new THREE.Group();
+        const stageGalaxy = new THREE.Group();
+        const stageWeb = new THREE.Group();
+        const stageMultiverse = new THREE.Group();
+        const stageDimensions = new THREE.Group();
+        const stageSource = new THREE.Group();
+        const stageEarlySystem = new THREE.Group();
+        
+        scene.add(stageMicro);
+        scene.add(stageEarth);
+        scene.add(stageSolar);
+        scene.add(stageGalaxy);
+        scene.add(stageWeb);
+        scene.add(stageMultiverse);
+        scene.add(stageDimensions);
+        scene.add(stageSource);
+        scene.add(stageEarlySystem);
+
+        // ================= ASSETS =================
+
+        // 0. MICRO (Cell)
+        const cellGeo = new THREE.SphereGeometry(0.5, 64, 64);
+        const cellMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0x44ffaa) } },
+            transparent: true,
+            vertexShader: `
+                uniform float uTime; varying vec3 vNormal; varying float vNoise;
+                vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+                vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+                float snoise(vec3 v) { const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0); vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g; vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy; i = mod289(i); vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0)); float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_); vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw); vec4 s0 = floor(b0) * 2.0 + 1.0; vec4 s1 = floor(b1) * 2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww; vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w); vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w; vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0); m = m * m; return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3))); }
+                void main() { vNormal = normal; float noise = snoise(position * 3.0 + uTime * 0.5); vNoise = noise; vec3 newPos = position + normal * noise * 0.1; gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0); }
+            `,
+            fragmentShader: `
+                uniform vec3 uColor; varying float vNoise; varying vec3 vNormal;
+                void main() { float fresnel = pow(1.0 - dot(vNormal, vec3(0,0,1)), 3.0); vec3 color = mix(uColor * 0.5, uColor, vNoise + 0.5); gl_FragColor = vec4(color + fresnel, 0.8); }
+            `
+        });
+        const cell = new THREE.Mesh(cellGeo, cellMat);
+        stageMicro.add(cell);
+
+        // 1. EARTH
+        const earthGeo = new THREE.SphereGeometry(1, 64, 64);
+        const earthMat = new THREE.MeshPhongMaterial({ color: 0x2233ff, emissive: 0x112244, specular: 0x111111, shininess: 10 });
+        const earth = new THREE.Mesh(earthGeo, earthMat);
+        stageEarth.add(earth);
+        const clouds = new THREE.Mesh(new THREE.SphereGeometry(1.02, 64, 64), new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+        stageEarth.add(clouds);
+        stageEarth.scale.set(0,0,0); // Start hidden
+
+        // 2. SOLAR SYSTEM
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(4, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffddaa }));
+        stageSolar.add(sun);
+        const orbitMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2 });
+        [8, 12, 18, 24, 40, 60].forEach((r, i) => {
+            const orbit = new THREE.Line(new THREE.BufferGeometry().setFromPoints(new THREE.EllipseCurve(0,0,r,r,0,2*Math.PI).getPoints(64)), orbitMat);
+            orbit.rotation.x = Math.PI/2;
+            stageSolar.add(orbit);
+            if(i===2) return; // Skip Earth
+            const p = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,16), new THREE.MeshBasicMaterial({color:0xaaaaaa}));
+            p.position.set(r,0,0);
+            stageSolar.add(p);
+        });
+        stageSolar.visible = false;
+
+        // 3. GALAXY
+        const galGeo = new THREE.BufferGeometry();
+        const galPos = [], galCol = [];
+        const c1 = new THREE.Color(0xff6030), c2 = new THREE.Color(0x1b3984);
+        for(let i=0; i<config.galaxyParticles; i++) {
+            const r = Math.random()*50, ang = r*0.8, branch = (i%3)*((Math.PI*2)/3);
+            const x = Math.cos(branch+ang)*r + (Math.random()-0.5)*2;
+            const z = Math.sin(branch+ang)*r + (Math.random()-0.5)*2;
+            galPos.push(x, (Math.random()-0.5)*(10/r), z);
+            const c = c1.clone().lerp(c2, r/50);
+            galCol.push(c.r, c.g, c.b);
+        }
+        galGeo.setAttribute('position', new THREE.Float32BufferAttribute(galPos,3));
+        galGeo.setAttribute('color', new THREE.Float32BufferAttribute(galCol,3));
+        const galaxy = new THREE.Points(galGeo, new THREE.PointsMaterial({size:0.15, vertexColors:true, blending:THREE.AdditiveBlending, transparent:true, opacity:0.8}));
+        galaxy.rotation.x = Math.PI/3;
+        stageGalaxy.add(galaxy);
+        stageGalaxy.visible = false;
+
+        // 4. COSMIC WEB
+        const webGeo = new THREE.BufferGeometry();
+        const webPos = [];
+        for(let i=0; i<config.webParticles; i++) webPos.push((Math.random()-0.5)*600, (Math.random()-0.5)*600, (Math.random()-0.5)*600);
+        webGeo.setAttribute('position', new THREE.Float32BufferAttribute(webPos,3));
+        const web = new THREE.Points(webGeo, new THREE.PointsMaterial({color:0x88aaff, size:0.6, transparent:true, opacity:0.4}));
+        stageWeb.add(web);
+        stageWeb.visible = false;
+
+        // 5. MULTIVERSE
+        const bubbleGeo = new THREE.IcosahedronGeometry(10, 2);
+        const bubbleMat = new THREE.MeshPhongMaterial({
+            color: 0xffffff, transparent: true, opacity: 0.1, 
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, shininess: 100
+        });
+        const multiverseGroup = new THREE.InstancedMesh(bubbleGeo, bubbleMat, config.bubbleCount);
+        const dummy = new THREE.Object3D();
+        for(let i=0; i<config.bubbleCount; i++) {
+            dummy.position.set((Math.random()-0.5)*1000, (Math.random()-0.5)*1000, (Math.random()-0.5)*1000 - 500);
+            const scale = 1 + Math.random() * 2;
+            dummy.scale.set(scale, scale, scale);
+            dummy.updateMatrix();
+            multiverseGroup.setMatrixAt(i, dummy.matrix);
+        }
+        stageMultiverse.add(multiverseGroup);
+        stageMultiverse.visible = false;
+
+        // 6. DIMENSIONS
+        const dimGeo = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+        const dimMat = new THREE.MeshBasicMaterial({ color: 0x4400ff, wireframe: true, transparent: true, opacity: 0.5 });
+        const dimensionTunnel = new THREE.Group();
+        for(let i=0; i<5; i++) {
+            const ring = new THREE.Mesh(dimGeo, dimMat);
+            ring.position.z = -i * 50;
+            ring.scale.set(1 + i, 1 + i, 1 + i);
+            ring.rotation.z = i;
+            dimensionTunnel.add(ring);
+        }
+        stageDimensions.add(dimensionTunnel);
+        stageDimensions.visible = false;
+
+        // 7. SOURCE
+        const sourceGeo = new THREE.SphereGeometry(5, 32, 32);
+        const sourceMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const sourceSphere = new THREE.Mesh(sourceGeo, sourceMat);
+        const spriteMat = new THREE.SpriteMaterial({ 
+            map: new THREE.CanvasTexture(generateGlowTexture()), 
+            color: 0xffffff, blending: THREE.AdditiveBlending 
+        });
+        const sourceGlow = new THREE.Sprite(spriteMat);
+        sourceGlow.scale.set(100, 100, 1);
+        stageSource.add(sourceSphere);
+        stageSource.add(sourceGlow);
+        stageSource.visible = false;
+
+        function generateGlowTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            context.fillStyle = gradient; context.fillRect(0,0,64,64);
+            return canvas;
+        }
+
+        // 8. PRIMORDIAL SYSTEM
+        const earlySun = new THREE.Mesh(new THREE.SphereGeometry(5, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff5500 }));
+        stageEarlySystem.add(earlySun);
+        
+        const moltenGeo = new THREE.SphereGeometry(1.5, 64, 64);
+        const moltenMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0.3, 0.0, 0.0)} },
+            vertexShader: cellMat.vertexShader,
+            fragmentShader: `
+                uniform float uTime; 
+                varying float vNoise;
+                uniform vec3 uColor;
+                void main() {
+                    vec3 c1 = uColor;
+                    vec3 c2 = vec3(1.0, 0.3, 0.0);
+                    if (uColor.g > 0.5) c2 = vec3(0.6, 1.0, 0.8);
+                    vec3 color = mix(c1, c2, vNoise * 1.5 + 0.2);
+                    gl_FragColor = vec4(color, 1.0);
+                }
+            `
+        });
+        const moltenEarth = new THREE.Mesh(moltenGeo, moltenMat);
+        moltenEarth.position.set(15, 0, 0);
+        stageEarlySystem.add(moltenEarth);
+
+        const debrisGeo = new THREE.TorusGeometry(15, 0.5, 16, 100);
+        const debrisMat = new THREE.MeshBasicMaterial({ color: 0xaa4400, wireframe: true, transparent: true, opacity: 0.3 });
+        const debrisRing = new THREE.Mesh(debrisGeo, debrisMat);
+        debrisRing.rotation.x = Math.PI/2;
+        stageEarlySystem.add(debrisRing);
+        stageEarlySystem.visible = false;
+
+
+        // STARS
+        const starsGeo = new THREE.BufferGeometry();
+        const sPos = []; for(let i=0; i<config.starCount; i++) sPos.push((Math.random()-0.5)*4000, (Math.random()-0.5)*4000, (Math.random()-0.5)*4000);
+        starsGeo.setAttribute('position', new THREE.Float32BufferAttribute(sPos,3));
+        const starField = new THREE.Points(starsGeo, new THREE.PointsMaterial({color:0xffffff, size:0.8, transparent:true, opacity:0.6}));
+        scene.add(starField);
+        
+        const light = new THREE.DirectionalLight(0xffffff, 1); light.position.set(1,1,1); scene.add(light);
+        scene.add(new THREE.AmbientLight(0x444444));
+
+        // --- TIMELINE ---
+        gsap.registerPlugin(ScrollTrigger);
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#scroll-track",
+                start: "top top",
+                end: "bottom bottom",
+                scrub: 1,
+            }
+        });
+
+        // 1. CELL -> HUMAN -> EARTH
+        tl.to("#text-cell", {opacity:1, duration:0.5})
+          .to(camera.position, {z:5, duration:2}, ">")
+          .to("#text-cell", {opacity:0, duration:0.5})
+          .to("#text-human", {opacity:1, duration:0.5})
+          .to(stageMicro.scale, {x:0, y:0, z:0, duration:2})
+          .to("#text-human", {opacity:0, duration:0.5})
+          .to(stageEarth.scale, {x:1, y:1, z:1, duration:2, ease:"back.out(1)"})
+          .to("#text-start", {opacity:1, duration:1}, "<")
+          .to(camera.position, {z:15, duration:3}, "<")
+        
+        // 2. EARTH -> SOLAR
+          .to("#text-start", {opacity:0, duration:0.5})
+          .call(() => stageSolar.visible = true)
+          .to(camera.position, {z:50, duration:5})
+          .to(stageEarth.scale, {x:0.01, y:0.01, z:0.01, duration:2})
+          .fromTo(stageSolar.position, {z:-50}, {z:0, duration:5}, "<")
+          .to("#text-solar", {opacity:1, duration:1, yoyo:true, repeat:1, repeatDelay:1})
+          
+        // 3. SOLAR -> GALAXY
+          .call(() => stageGalaxy.visible = true)
+          .to(camera.position, {z:100, duration:5})
+          .to(stageSolar.scale, {x:0, y:0, z:0, duration:2})
+          .fromTo(stageGalaxy.position, {z:-100}, {z:0, duration:5}, "<")
+          .to("#text-galaxy", {opacity:1, duration:1, yoyo:true, repeat:1, repeatDelay:1})
+
+        // 4. GALAXY -> WEB
+          .call(() => stageWeb.visible = true)
+          .to(camera.position, {z:150, duration:5})
+          .to(stageGalaxy.scale, {x:0, y:0, z:0, duration:2})
+          .fromTo(stageWeb.position, {z:-100}, {z:0, duration:5}, "<")
+          .to("#text-web", {opacity:1, duration:1, yoyo:true, repeat:1, repeatDelay:1})
+
+        // 5. WEB -> MULTIVERSE
+          .call(() => stageMultiverse.visible = true)
+          .to(camera.position, {z:300, duration:8})
+          .to(stageWeb.scale, {x:0.1, y:0.1, z:0.1, duration:3})
+          .to("#text-multiverse", {opacity:1, duration:2, yoyo:true, repeat:1, repeatDelay:2})
+        
+        // 6. MULTIVERSE -> DIMENSIONS
+          .call(() => stageDimensions.visible = true)
+          .to(camera.position, {z:500, duration:10})
+          .fromTo(stageDimensions.position, {z:-200}, {z:100, duration:10}, "<")
+          .to(dimensionTunnel.rotation, {z:10, duration:10}, "<")
+          .to("#text-dimensions", {opacity:1, duration:1, yoyo:true, repeat:1, repeatDelay:1})
+          .to("#text-planes", {opacity:1, duration:1, yoyo:true, repeat:1, repeatDelay:1})
+
+        // 7. DIMENSIONS -> SOURCE
+          .call(() => stageSource.visible = true)
+          .to(stageDimensions.scale, {x:0, y:0, z:0, duration:2})
+          .fromTo(stageSource.position, {z:-100}, {z:0, duration:5})
+          .to("#text-source", {opacity:1, duration:2})
+          
+        // 8. SOURCE -> BIG BANG
+          .to(sourceGlow.scale, {x:500, y:500, duration:2, ease:"power4.in"})
+          .to("#text-source", {opacity:0, duration:0.5})
+          .to("#text-bigbang", {opacity:1, duration:1, yoyo:true, repeat:1})
+          
+        // 9. BIG BANG -> EARLY SYSTEM
+          .call(() => {
+              stageSource.visible = false;
+              stageMultiverse.visible = false;
+              stageWeb.visible = false;
+              stageEarlySystem.visible = true;
+          })
+          .set(camera.position, {z: 50})
+          .fromTo(stageEarlySystem.scale, {x:0, y:0, z:0}, {x:1, y:1, z:1, duration:5})
+          .to("#text-early-solar", {opacity:1, duration:1, yoyo:true, repeat:1})
+          
+        // 10. EARLY SYSTEM -> MOLTEN EARTH -> LOOP
+          .to(camera.position, {z: 20, x: 10, duration: 5})
+          .to("#text-early-earth", {opacity:1, duration:2})
+          .to(camera.position, {z: 16.5, x: 15, duration: 4})
+
+          .to(moltenMat.uniforms.uTime, {value: 10, duration: 5})
+          .to("#text-early-earth", {opacity:0, duration:1})
+          .to("#text-loop", {opacity:1, duration:2})
+          
+          // Color Transition Fix
+          .to(moltenMat.uniforms.uColor.value, {r: 0.267, g: 1.0, b: 0.667, duration: 2})
+          
+          .to("#canvas-container", {opacity:0, duration:2})
+          .call(() => {
+             window.scrollTo(0,0); 
+             moltenMat.uniforms.uColor.value.set(0.3, 0.0, 0.0);
+             gsap.set("#canvas-container", {opacity:1});
+          });
+
+
+        // --- ANIMATION & LOGIC ---
+        const clock = new THREE.Clock();
+        let isAutoScrolling = false;
+
+        function animate() {
+            const time = clock.getElapsedTime();
+            
+            cellMat.uniforms.uTime.value = time;
+            moltenMat.uniforms.uTime.value = time;
+            
+            earth.rotation.y = time * 0.05;
+            stageSolar.rotation.z = time * 0.02;
+            stageGalaxy.rotation.z += 0.001;
+            stageWeb.rotation.y = time * 0.01;
+            multiverseGroup.rotation.y = time * 0.005;
+            dimensionTunnel.rotation.z += 0.005;
+            moltenEarth.rotation.y = time * 0.1;
+            debrisRing.rotation.z = time * 0.05;
+
+            // Robust Auto-Pilot
+            if (isAutoScrolling) {
+                // Using scrollTo + calculation is more reliable than scrollBy in loop
+                const currentY = window.scrollY || document.documentElement.scrollTop;
+                // Move 2% of viewport height per frame (~1.2 screens per second)
+                const moveAmount = window.innerHeight * 0.02; 
+                window.scrollTo(0, currentY + moveAmount);
+            }
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Controls
+        const btn = document.getElementById('auto-scroll-btn');
+        const bgm = document.getElementById('bgm');
+        
+        btn.addEventListener('click', () => {
+            isAutoScrolling = !isAutoScrolling;
+            
+            if (isAutoScrolling) {
+                btn.textContent = "Stop Auto-Pilot";
+                btn.style.background = "rgba(160, 192, 255, 0.3)";
+                bgm.play().catch(e => console.log("Audio play prevented:", e));
+            } else {
+                btn.textContent = "Start Auto-Pilot";
+                btn.style.background = "rgba(255, 255, 255, 0.1)";
+            }
+        });
+
+        animate();
+
+        // Safe Loading (Prevent hanging if audio is slow)
+        function removeLoader() {
+            const l = document.getElementById('loader');
+            if(l) {
+                l.style.opacity = 0;
+                setTimeout(() => l.remove(), 1000);
+            }
+        }
+
+        // Try standard load, but force clear after 4 seconds
+        window.onload = () => setTimeout(removeLoader, 1000);
+        setTimeout(removeLoader, 4000);
+
+    </script>
+</body>
+</html>
